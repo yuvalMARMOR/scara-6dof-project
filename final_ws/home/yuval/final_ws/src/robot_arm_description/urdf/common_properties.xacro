@@ -1,0 +1,38 @@
+<?xml version="1.0" ?>
+<robot name="scara_arm" xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+    <xacro:property name="base_length" value="0.01" />
+    <xacro:property name="base_radius" value="0.1" />
+    <xacro:property name="link_1_length" value="0.8" />
+    <xacro:property name="link_1_radius" value="0.04" />
+    <xacro:property name="arm_length" value="0.5" />
+    <xacro:property name="arm_radius" value="0.03" />
+    <xacro:property name="link_4_length" value="0.1" />
+    <xacro:property name="link_4_radius" value="0.04" />
+    <xacro:property name="link_5_length" value="0.18" />
+    <xacro:property name="link_5_radius" value="0.03" />
+    <xacro:property name="link_6_length" value="0.06" />
+    <xacro:property name="link_6_radius" value="0.03" />
+
+
+    <xacro:macro name="cylinder_inertia" params="m r l xyz rpy">
+        <inertial>
+            <origin xyz="${xyz}" rpy="${rpy}" />
+            <mass value="${m}" />
+            <inertia ixx="${(m/4)*(r*r) + (m/12)*(l*l)}" ixy="0" ixz="0" 
+                     iyy="${(m/2)*(r*r)}" iyz="0"
+                     izz="${(m/4)*(r*r) + (m/12)*(l*l)}" />
+        </inertial>
+    </xacro:macro>
+
+    <xacro:macro name="ball_inertia" params="m r xyz rpy">
+        <inertial>
+            <origin xyz="${xyz}" rpy="${rpy}" />
+            <mass value="${m}" />
+            <inertia ixx="${(m*2/5)*(r*r)}" ixy="0" ixz="0" 
+                     iyy="${(m*2/5)*(r*r)}" iyz="0"
+                     izz="${(m*2/5)*(r*r)}" />
+        </inertial>
+    </xacro:macro>
+
+</robot>

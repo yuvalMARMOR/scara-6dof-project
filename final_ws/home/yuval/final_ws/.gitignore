@@ -1,0 +1,27 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environments
+.venv/
+venv/
+
+# ROS2 build/install/log
+build/
+install/
+log/
+
+# Colcon
+colcon_cd.sh
+.colcon_install_layout
+
+# VSCode settings
+.vscode/
+
+# OS files
+.DS_Store
+Thumbs.db
+**/build/
+**/install/
+**/log/

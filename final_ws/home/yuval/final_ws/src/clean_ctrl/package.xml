@@ -1,0 +1,19 @@
+<?xml version="1.0"?>
+<package format="3">
+  <name>clean_ctrl</name>
+  <version>0.0.0</version>
+  <description>Clean Controller Package</description>
+  <maintainer email="yuval@example.com">Yuval</maintainer>
+  <license>MIT</license>
+
+  <buildtool_depend>ament_cmake</buildtool_depend>
+
+  <build_depend>controller_manager</build_depend>
+  <build_depend>ros2_control</build_depend>
+
+  <exec_depend>ament_cmake</exec_depend>
+  <exec_depend>controller_manager</exec_depend>
+  <exec_depend>ros2_control</exec_depend>
+  <exec_depend>xacro</exec_depend>
+</package>
+

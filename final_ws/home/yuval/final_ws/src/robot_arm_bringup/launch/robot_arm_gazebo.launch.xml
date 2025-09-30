@@ -1,0 +1,15 @@
+<launch>
+    <let name="urdf_path"
+         value="$(find-pkg-share robot_arm_description)/urdf/robot_arm.urdf.xacro" />
+
+    <node pkg="robot_state_publisher" exec="robot_state_publisher">
+        <param name="robot_description"
+                value="$(command 'xacro $(var urdf_path)')" />
+    </node>
+
+    <include file="$(find-pkg-share gazebo_ros)/launch/gazebo.launch.py" />
+
+    <node pkg="gazebo_ros" exec="spawn_entity.py"
+          args="-topic robot_description -entity scara_arm" />
+
+</launch>
