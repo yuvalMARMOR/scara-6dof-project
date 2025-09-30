@@ -32,6 +32,7 @@ Installation:
 Run:
 
   python simulation.py
+  
   python imges.py
 
 ## 🤖 ROS 2 Visualization
