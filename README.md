@@ -12,14 +12,16 @@ Core development is in **Python** (kinematics, workspace, plots).
 
 ## 📂 Repository structure
 .
-├─ simulation.py          # Main Python simulation (FK/IK, analysis, animations)
-├─ imges.py               # Plots & workspace figures
-├─ final_ws/              # ROS 2 workspace (for visualization only)
-│  └─ src/
-├─ docs/                  # Reports & instructions
-│   ├─ SCARA-6DOF-Final-Report.pdf
-│   └─ Setup-Instructions.pdf
-└─ .gitignore
+├─ simulation.py          # Main Python simulation (FK/IK, analysis, animations)  
+├─ imges.py               # Plots & workspace figures  
+├─ final_ws/              # ROS 2 workspace (for visualization only)  
+│  └─ src/  
+├─ docs/                  # Reports & instructions  
+│   ├─ SCARA-6DOF-Final-Report.pdf  
+│   └─ Setup-Instructions.pdf  
+└─ .gitignore  
+
+
 
 ## 🐍 Python (main part)
 Installation:
