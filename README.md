@@ -1,4 +1,4 @@
-# SCARA 6-DOF Project
+# 🦾 SCARA 6-DOF Project
 
 Full project of a 6-DOF SCARA robotic arm.  
 Core development is in **Python** (kinematics, workspace, plots).  
