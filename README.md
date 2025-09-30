@@ -11,16 +11,18 @@ Core development is in **Python** (kinematics, workspace, plots).
 - ROS 2 URDF/Xacro models with RViz & Gazebo visualization
 
 ## 📂 Repository structure
+```
 .
 ├─ simulation.py          # Main Python simulation (FK/IK, analysis, animations)
 ├─ imges.py               # Plots & workspace figures
 ├─ final_ws/              # ROS 2 workspace (for visualization only)
 │  └─ src/
 ├─ docs/                  # Reports & instructions
-│   ├─ SCARA-6DOF-Final-Report.pdf      # Full academic report
-│   └─ Setup-Instructions.pdf           # How to install and run
+│   ├─ SCARA-6DOF-Final-Report.pdf   # Full academic report
+│   └─ Setup-Instructions.pdf        # How to install and run
 └─ .gitignore
- 
+```
+
 
 
 
