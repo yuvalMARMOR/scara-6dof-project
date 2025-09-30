@@ -27,11 +27,11 @@ Core development is in **Python** (kinematics, workspace, plots).
 Installation:
 
   pip install numpy matplotlib
+  
 
 Run:
 
   python simulation.py
-  
   python imges.py
 
 ## 🤖 ROS 2 Visualization
