@@ -43,12 +43,21 @@ Run:
 Workspace: final_ws/
 
 Build & Launch RViz:
+```
 cd final_ws
+```
+```
 colcon build
+```
+```
 source install/setup.bash   # Linux
+```
+```
 call install\setup.bat      # Windows
+```
+```
 ros2 launch robot_arm_description display.launch.py
-
+```
 ## 📄 Documentation
 - [SCARA-6DOF-Final-Report.pdf](docs/SCARA-6DOF-Final-Report.pdf)  
 - [Setup-Instructions.pdf](docs/Setup-Instructions.pdf)
