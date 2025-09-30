@@ -1,4 +1,4 @@
-# 🦾 SCARA 6-DOF Project
+# SCARA 6-DOF Project
 
 Full project of a 6-DOF SCARA robotic arm.  
 Core development is in **Python** (kinematics, workspace, plots).  
@@ -17,22 +17,22 @@ Core development is in **Python** (kinematics, workspace, plots).
 ├─ final_ws/              # ROS 2 workspace (for visualization only)
 │  └─ src/
 ├─ docs/                  # Reports & instructions
-│   ├─ [SCARA-6DOF-Final-Report.pdf](docs/SCARA-6DOF-Final-Report.pdf)
-│   └─ [Setup-Instructions.pdf](docs/Setup-Instructions.pdf)
+│   ├─ SCARA-6DOF-Final-Report.pdf
+│   └─ Setup-Instructions.pdf
 └─ .gitignore
 
 ## 🐍 Python (main part)
-**Installation:**
+Installation:
 pip install numpy matplotlib
 
-**Run:**
+Run:
 python simulation.py
 python imges.py
 
 ## 🤖 ROS 2 Visualization
 Workspace: final_ws/
 
-**Build & Launch RViz:**
+Build & Launch RViz:
 cd final_ws
 colcon build
 source install/setup.bash   # Linux
@@ -40,12 +40,8 @@ call install\setup.bat      # Windows
 ros2 launch robot_arm_description display.launch.py
 
 ## 📄 Documentation
-- [SCARA-6DOF-Final-Report.pdf](docs/SCARA-6DOF-Final-Report.pdf) – full final project report  
-- [Setup-Instructions.pdf](docs/Setup-Instructions.pdf) – setup and usage instructions  
+- [SCARA-6DOF-Final-Report.pdf](docs/SCARA-6DOF-Final-Report.pdf)  
+- [Setup-Instructions.pdf](docs/Setup-Instructions.pdf)
 
 ## 📜 License
 This project is licensed under the [MIT License](LICENSE).
-
-
-## 📄 Documentation
-Reports and explanations are inside the `docs/` folder.
