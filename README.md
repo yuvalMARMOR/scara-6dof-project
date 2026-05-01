@@ -1,95 +1,94 @@
-# Optimal Missile Guidance Using LQG Control
+# SCARA 6-DOF Project
 
-This project implements an optimal missile guidance system based on the Linear Quadratic Gaussian framework.  
-The goal is to guide a pursuer toward a maneuvering target while minimizing the final miss distance and limiting control effort.
+Full project of a 6-DOF SCARA robotic arm.
 
-The system combines optimal control, stochastic modeling, Riccati equation solvers, and Kalman filtering for state estimation under noisy measurements.
+Core development is done in **Python** for kinematics, workspace analysis, plotting, simulations, and animations.
 
-![Missile Guidance Animation](media/missile_guidance.gif)
+**ROS 2** is used for visualization in **RViz** and **Gazebo** with URDF/Xacro models.
 
-## Project Overview
+## 🚀 Features
 
-The engagement is modeled as a planar pursuit problem between a missile and a maneuvering target.  
-The target acceleration is treated as a stochastic process, while the missile receives noisy line-of-sight measurements.
+- Forward kinematics and inverse kinematics calculations
+- Workspace plots and 3D visualizations
+- Python-based simulations and animations
+- ROS 2 URDF/Xacro robot model
+- RViz and Gazebo visualization
+- Academic report and setup instructions
 
-The solution follows the LQG framework:
-
-- A control Riccati equation is solved backward in time to compute the optimal feedback gains.
-- A filtering Riccati equation is solved forward in time to compute the Kalman gains.
-- A Kalman filter estimates the unmeasured states.
-- The optimal control law uses the estimated state to generate the pursuer acceleration command.
-
-## Main Features
-
-- Linear stochastic state-space model
-- Time-varying LQG control law
-- Backward Riccati solver for optimal feedback control
-- Forward Riccati solver for Kalman state estimation
-- Closed-loop simulation of missile-target engagement
-- Visualization of state trajectories, gains, control input, and cost-to-go
-- Animated engagement scenario
-
-## Repository Structure
+## 📂 Repository Structure
 
 ```text
-optimal-missile-guidance-lqg/
-│
-├── README.md
-├── .gitignore
-│
-├── src/
-│   ├── optimal_missile_guidance.py
-│   └── animation_missile_guidance.py
-│
-├── media/
-│   └── missile_guidance.gif
-│
-└── report/
-    └── Optimal_Control_Project.pdf
+.
+├── simulation.py
+├── imges.py
+├── final_ws/
+│   └── src/
+├── docs/
+│   ├── SCARA-6DOF-Final-Report.pdf
+│   └── Setup-Instructions.pdf
+├── LICENSE
+└── .gitignore
 ```
 
-## How to Run
+## 🐍 Python
 
 Install the required Python packages:
 
 ```bash
-pip install numpy matplotlib pillow
+pip install numpy matplotlib
 ```
 
 Run the main simulation:
 
 ```bash
-python src/optimal_missile_guidance.py
+python simulation.py
 ```
 
-Run the animation script:
+Run the plotting and workspace visualization script:
 
 ```bash
-python src/animation_missile_guidance.py
+python imges.py
 ```
 
-## Project Report
+## 🤖 ROS 2 Visualization
 
-The full mathematical derivation, numerical implementation, and result analysis are available here:
+The ROS 2 workspace is located in:
 
-[Open the full project report](report/Optimal_Control_Project.pdf)
+```text
+final_ws/
+```
 
-## Methods Used
+Build the workspace:
 
-- Linear Quadratic Gaussian control
-- Kalman filtering
-- Riccati differential equations
-- Stochastic state-space modeling
-- Monte Carlo simulation
-- Python-based numerical integration and visualization
+```bash
+cd final_ws
+colcon build
+```
 
-## Technologies
+Source the workspace on Linux:
 
-- Python
-- NumPy
-- Matplotlib
-- Pillow
+```bash
+source install/setup.bash
+```
 
-## Author
+Source the workspace on Windows:
 
-Yuval Marmor
+```bash
+call install\setup.bat
+```
+
+Launch the robot visualization:
+
+```bash
+ros2 launch robot_arm_description display.launch.py
+```
+
+## 📄 Documentation
+
+- [SCARA-6DOF-Final-Report.pdf](docs/SCARA-6DOF-Final-Report.pdf)
+- [Setup-Instructions.pdf](docs/Setup-Instructions.pdf)
+
+## 📜 License
+
+This project is licensed under the [MIT License](LICENSE).
+
