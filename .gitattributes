@@ -1,0 +1,2 @@
+# The executed notebook is a presentation artifact, not the project's source language.
+notebooks/*.ipynb linguist-documentation
