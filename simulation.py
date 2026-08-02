@@ -3,6 +3,12 @@ import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 import matplotlib.animation as animation
 
+from scara_model import (
+    forward_kinematics as analytical_forward_kinematics,
+    inverse_position,
+    plan_cartesian_trajectory,
+)
+
 class SCARASimulator:
     def __init__(self):
         # Robot physical parameters from the research paper
@@ -32,220 +38,76 @@ class SCARASimulator:
     
     def forward_kinematics(self, theta1, l1, l2, theta2, theta3, theta4):
         """
-        Calculate end effector position using forward kinematics
+        Calculate end-effector position using the final-report convention.
         """
-        # Convert angles to radians
-        th1 = np.deg2rad(theta1)
-        th2 = np.deg2rad(theta2)
-        th3 = np.deg2rad(theta3)
-        
-        # Trigonometric calculations
-        cos1, sin1 = np.cos(th1), np.sin(th1)
-        cos2, sin2 = np.cos(th2), np.sin(th2)
-        cos3, sin3 = np.cos(th3), np.sin(th3)
-        
-        # Position equations from the research paper
-        x = -150*sin1 - 150*cos3*sin1 - l2*sin1 - 150*cos1*cos2*sin3
-        y = 150*cos1 + 150*cos1*cos3 + l2*cos1 - 150*cos2*sin1*sin3
-        z = l1 + 150*sin2*sin3 + 800
-        
-        return np.array([x, y, z])
+        return analytical_forward_kinematics(theta1, l1, l2, theta2, theta3, theta4)
     
     def inverse_kinematics(self, target_position, target_orientation=None, previous_config=None):
         """
-        Calculate joint angles for desired end effector position
+        Solve position IK for an explicitly selected wrist posture.
+
+        This is intentionally not a general full-pose IK solver.  The optional
+        three-value argument is interpreted as [theta2, theta3, theta4], not as
+        roll, pitch and yaw.  ``previous_config`` is retained for compatibility
+        but is not used to distort the exact analytical solution.
         """
-        x, y, z = target_position
-        
-        # Calculate vertical extension
-        l1 = z - self.base_height
-        l1 = max(0, min(500, l1))  # Apply joint limits
-        
-        # Calculate radial distance and base angle
-        radial_distance = np.sqrt(x**2 + y**2)
-        
-        if radial_distance < 1e-6:
-            # Handle singularity at origin
-            theta1 = 0 if previous_config is None else previous_config[0]
-            l2 = 0
-        else:
-            # Calculate base rotation angle
-            theta1_raw = np.rad2deg(np.arctan2(y, x))
-            
-            # Smooth angle transitions to avoid jumps
-            if previous_config is not None:
-                angle_difference = theta1_raw - previous_config[0]
-                # Normalize angle difference
-                while angle_difference > 180:
-                    angle_difference -= 360
-                while angle_difference < -180:
-                    angle_difference += 360
-                theta1 = previous_config[0] + 0.7 * angle_difference
-            else:
-                theta1 = theta1_raw
-            
-            # Calculate horizontal extension
-            l2 = radial_distance - self.link_offset
-            l2 = max(0, min(500, l2))
-        
-        # Calculate wrist orientations
-        if target_orientation is None:
-            if previous_config is not None:
-                # Create smooth orientation motion
-                radial_norm = min(radial_distance / 800.0, 1.0)
-                height_norm = l1 / 500.0
-                
-                # Generate orientation targets
-                theta2_target = 20 * np.sin(radial_norm * 2 * np.pi)
-                theta3_target = 15 * np.cos(height_norm * np.pi) if height_norm > 0 else 0
-                theta4_target = previous_config[5] + 3.0  # Continuous rotation
-                
-                # Apply smoothing filter
-                smoothing_factor = 0.7
-                theta2 = previous_config[3] + smoothing_factor * (theta2_target - previous_config[3])
-                theta3 = previous_config[4] + smoothing_factor * (theta3_target - previous_config[4])
-                theta4 = theta4_target
-            else:
-                theta2 = theta3 = theta4 = 0
-        else:
-            theta2, theta3, theta4 = target_orientation
-        
-        # Apply joint limits
-        theta1 = max(-180, min(180, theta1))
-        theta2 = max(-180, min(180, theta2))
-        theta3 = max(-135, min(135, theta3))
-        theta4 = max(-180, min(180, theta4))
-        
-        return [theta1, l1, l2, theta2, theta3, theta4]
+        del previous_config
+        wrist_posture = (0.0, 90.0, 0.0) if target_orientation is None else target_orientation
+        return inverse_position(target_position, *wrist_posture).tolist()
     
     def compute_robot_frames(self, theta1, l1, l2, theta2, theta3, theta4):
         """
-        Calculate positions of all robot joints and links
+        Calculate illustrative stick-frame positions from the analytical chain.
         """
         th1 = np.deg2rad(theta1)
         th2 = np.deg2rad(theta2)
         th3 = np.deg2rad(theta3)
-        
-        frame_positions = []
-        
-        # World frame origin
-        frame_positions.append(np.array([0, 0, 0]))
-        
-        # Base platform
-        frame_positions.append(np.array([0, 0, 50]))
-        
-        # Top of vertical column
-        frame_positions.append(np.array([0, 0, 800]))
-        
-        # After vertical extension
-        frame_positions.append(np.array([0, 0, 800 + l1]))
-        
-        # After horizontal extension
-        horizontal_pos = np.array([l2 * np.cos(th1), l2 * np.sin(th1), 800 + l1])
-        frame_positions.append(horizontal_pos)
-        
-        # First wrist joint
-        wrist_offset1 = np.array([150 * np.cos(th1), 150 * np.sin(th1), 0])
-        frame_positions.append(horizontal_pos + wrist_offset1)
-        
-        # Second wrist joint
-        wrist_offset2 = np.array([50 * np.cos(th1 + th2), 50 * np.sin(th1 + th2), 0])
-        frame_positions.append(frame_positions[-1] + wrist_offset2)
-        
-        # End effector position
-        end_effector_pos = self.forward_kinematics(theta1, l1, l2, theta2, theta3, theta4)
-        frame_positions.append(end_effector_pos)
-        
-        return np.array(frame_positions)
+
+        height = 800.0 + l1
+        after_l2 = np.array([-l2 * np.sin(th1), l2 * np.cos(th1), height])
+        wrist_center = np.array(
+            [-(l2 + 150.0) * np.sin(th1), (l2 + 150.0) * np.cos(th1), height]
+        )
+        local_tool_offset = np.array(
+            [-150.0 * np.cos(th2) * np.sin(th3), 150.0 * np.cos(th3), 150.0 * np.sin(th2) * np.sin(th3)]
+        )
+        c1, s1 = np.cos(th1), np.sin(th1)
+        world_tool_offset = np.array(
+            [c1 * local_tool_offset[0] - s1 * local_tool_offset[1],
+             s1 * local_tool_offset[0] + c1 * local_tool_offset[1],
+             local_tool_offset[2]]
+        )
+        end_effector = wrist_center + world_tool_offset
+        return np.array(
+            [
+                [0.0, 0.0, 0.0],
+                [0.0, 0.0, 50.0],
+                [0.0, 0.0, 800.0],
+                [0.0, 0.0, height],
+                after_l2,
+                wrist_center,
+                end_effector,
+            ]
+        )
     
     def plan_trajectory(self, start_pos, end_pos, motion_time=30.0):
         """
         Generate trajectory between two points using trapezoidal velocity profile
         """
         print(f"Planning trajectory from {start_pos} to {end_pos}")
-        
-        # Motion profile timing
-        acceleration_time = 10.0
-        deceleration_start_time = 20.0
-        time_step = 0.04
-        
-        time_points = np.arange(0, motion_time + time_step, time_step)
-        num_points = len(time_points)
-        
-        # Initialize arrays
-        positions = np.zeros((3, num_points))
-        orientations = np.zeros((3, num_points))
-        joint_configurations = []
-        velocity_profile = np.zeros(num_points)
-        
-        print(f"Generating {num_points} trajectory points...")
-        
-        previous_joints = None
-        total_distance = np.linalg.norm(end_pos - start_pos)
-        
-        # Calculate maximum velocity for trapezoidal profile
-        area_under_curve = motion_time/2 + deceleration_start_time/2 - acceleration_time/2
-        max_velocity = total_distance / area_under_curve
-        
-        print(f"Maximum velocity: {max_velocity:.2f} mm/s")
-        
-        for i, t in enumerate(time_points):
-            # Calculate motion profile
-            if t <= acceleration_time:
-                # Acceleration phase
-                acceleration = max_velocity / acceleration_time
-                distance_factor = 0.5 * acceleration * t**2 / total_distance
-                current_velocity = acceleration * t
-                
-            elif t <= deceleration_start_time:
-                # Constant velocity phase
-                accel_distance = 0.5 * max_velocity * acceleration_time
-                const_distance = max_velocity * (t - acceleration_time)
-                distance_factor = (accel_distance + const_distance) / total_distance
-                current_velocity = max_velocity
-                
-            else:
-                # Deceleration phase
-                decel_time = motion_time - deceleration_start_time
-                time_into_decel = t - deceleration_start_time
-                
-                accel_distance = 0.5 * max_velocity * acceleration_time
-                const_distance = max_velocity * (deceleration_start_time - acceleration_time)
-                
-                decel_acceleration = max_velocity / decel_time
-                decel_distance = max_velocity * time_into_decel - 0.5 * decel_acceleration * time_into_decel**2
-                
-                distance_factor = (accel_distance + const_distance + decel_distance) / total_distance
-                current_velocity = max_velocity - decel_acceleration * time_into_decel
-            
-            # Ensure bounds
-            distance_factor = max(0, min(1, distance_factor))
-            current_velocity = max(0, current_velocity)
-            velocity_profile[i] = current_velocity
-            
-            # Calculate position
-            positions[:, i] = start_pos + distance_factor * (end_pos - start_pos)
-            
-            # Calculate orientations for 6-DOF motion
-            roll_angle = 10 * np.sin(distance_factor * 2 * np.pi)
-            pitch_angle = 15 * np.cos(distance_factor * np.pi)
-            yaw_angle = distance_factor * 180
-            orientations[:, i] = [roll_angle, pitch_angle, yaw_angle]
-            
-            # Solve inverse kinematics
-            joint_config = self.inverse_kinematics(positions[:, i], orientations[:, i], previous_joints)
-            joint_configurations.append(joint_config)
-            previous_joints = joint_config
-        
-        return {
-            'time': time_points,
-            'positions': positions,
-            'orientations': orientations,
-            'joint_configs': joint_configurations,
-            'velocities': velocity_profile,
-            'start_pos': start_pos,
-            'end_pos': end_pos
-        }
+        trajectory = plan_cartesian_trajectory(
+            start_pos,
+            end_pos,
+            motion_time=motion_time,
+            theta2=0.0,
+            theta3=90.0,
+            theta4_start=0.0,
+            theta4_end=180.0,
+        )
+        print(f"Generating {trajectory['time'].size} trajectory points...")
+        print(f"Maximum velocity: {np.max(trajectory['velocities']):.2f} mm/s")
+        print(f"Maximum FK position error: {np.max(trajectory['position_error']):.3e} mm")
+        return trajectory
     
     def draw_robot_base(self, ax):
         """Draw the robot base structure"""
@@ -347,12 +209,15 @@ class SCARASimulator:
     
     def draw_trajectory_path(self, ax, trajectory_data, current_frame):
         """Draw the robot trajectory with velocity coloring"""
-        positions = trajectory_data['positions']
+        commanded_positions = trajectory_data['commanded_positions']
+        positions = trajectory_data['achieved_positions']
         velocities = trajectory_data['velocities']
         
-        # Draw planned path (faded)
-        ax.plot(positions[0], positions[1], positions[2], 
-               'lightblue', linewidth=2, alpha=0.2, linestyle=':')
+        # Draw commanded path separately from the FK-achieved path.
+        ax.plot(commanded_positions[0], commanded_positions[1], commanded_positions[2],
+               color='black', linewidth=2, alpha=0.45, linestyle='--', label='Commanded path')
+        ax.plot(positions[0], positions[1], positions[2],
+               color='lightblue', linewidth=2, alpha=0.35, linestyle=':', label='FK-achieved path')
         
         # Draw completed path with velocity-based colors
         if current_frame > 1:
@@ -466,7 +331,7 @@ class SCARASimulator:
             if frame_num < len(trajectory_data['joint_configs']):
                 # Get current robot state
                 current_joints = trajectory_data['joint_configs'][frame_num]
-                current_position = trajectory_data['positions'][:, frame_num]
+                current_position = trajectory_data['achieved_positions'][:, frame_num]
                 current_time = trajectory_data['time'][frame_num]
                 
                 # Calculate robot frame positions
@@ -532,6 +397,7 @@ class SCARASimulator:
         print(f"\nVelocity Profile Check:")
         print(f"  Maximum velocity: {max_velocity:.1f} mm/s")
         print(f"  Velocity at 20s: {vel_at_20s:.1f} mm/s")
+        print(f"  Maximum FK position error: {np.max(trajectory['position_error']):.3e} mm")
         
         print("\nCreating robot animation...")
         self.create_robot_animation(trajectory, save_animation=True)

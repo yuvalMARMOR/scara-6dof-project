@@ -3,6 +3,9 @@ __pycache__/
 *.py[cod]
 *$py.class
 
+# Jupyter notebook checkpoints
+.ipynb_checkpoints/
+
 # Virtual environments
 .venv/
 venv/

@@ -2,6 +2,14 @@ import numpy as np
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 
+from scara_model import (
+    REFERENCE_CASES,
+    forward_kinematics as analytical_forward_kinematics,
+    inverse_position,
+    plan_cartesian_trajectory,
+    sample_workspace,
+)
+
 class SCARAGraphGenerator:
     """
     SCARA robot graph generator - Creates all graphs from the Hebrew research paper
@@ -19,168 +27,50 @@ class SCARAGraphGenerator:
     
     def forward_kinematics(self, theta1, l1, l2, theta2, theta3, theta4):
         """Calculate end effector position using forward kinematics"""
-        # Convert angles to radians
+        return analytical_forward_kinematics(theta1, l1, l2, theta2, theta3, theta4)
+    
+    def inverse_kinematics(self, target_position, target_orientation=None, previous_config=None):
+        """Solve position IK for [theta2, theta3, theta4] wrist values."""
+        del previous_config
+        wrist_posture = (0.0, 90.0, 0.0) if target_orientation is None else target_orientation
+        return inverse_position(target_position, *wrist_posture).tolist()
+    
+    def compute_robot_frames(self, theta1, l1, l2, theta2, theta3, theta4):
+        """Calculate illustrative stick frames from the analytical chain."""
         th1 = np.deg2rad(theta1)
         th2 = np.deg2rad(theta2)
         th3 = np.deg2rad(theta3)
-        
-        # Trigonometric calculations
-        cos1, sin1 = np.cos(th1), np.sin(th1)
-        cos2, sin2 = np.cos(th2), np.sin(th2)
-        cos3, sin3 = np.cos(th3), np.sin(th3)
-        
-        # Position equations from the research paper
-        x = -150*sin1 - 150*cos3*sin1 - l2*sin1 - 150*cos1*cos2*sin3
-        y = 150*cos1 + 150*cos1*cos3 + l2*cos1 - 150*cos2*sin1*sin3
-        z = l1 + 150*sin2*sin3 + 800
-        
-        return np.array([x, y, z])
-    
-    def inverse_kinematics(self, target_position, target_orientation=None, previous_config=None):
-        """Calculate joint angles for desired end effector position"""
-        x, y, z = target_position
-        
-        # Calculate vertical extension
-        l1 = z - self.base_height
-        l1 = max(0, min(500, l1))
-        
-        # Calculate radial distance and base angle
-        radial_distance = np.sqrt(x**2 + y**2)
-        
-        if radial_distance < 1e-6:
-            theta1 = 0 if previous_config is None else previous_config[0]
-            l2 = 0
-        else:
-            theta1_raw = np.rad2deg(np.arctan2(y, x))
-            
-            if previous_config is not None:
-                angle_difference = theta1_raw - previous_config[0]
-                while angle_difference > 180:
-                    angle_difference -= 360
-                while angle_difference < -180:
-                    angle_difference += 360
-                theta1 = previous_config[0] + 0.7 * angle_difference
-            else:
-                theta1 = theta1_raw
-            
-            l2 = radial_distance - self.link_offset
-            l2 = max(0, min(500, l2))
-        
-        # Calculate wrist orientations
-        if target_orientation is None:
-            if previous_config is not None:
-                radial_norm = min(radial_distance / 800.0, 1.0)
-                height_norm = l1 / 500.0
-                
-                theta2_target = 20 * np.sin(radial_norm * 2 * np.pi)
-                theta3_target = 15 * np.cos(height_norm * np.pi) if height_norm > 0 else 0
-                theta4_target = previous_config[5] + 3.0
-                
-                smoothing_factor = 0.7
-                theta2 = previous_config[3] + smoothing_factor * (theta2_target - previous_config[3])
-                theta3 = previous_config[4] + smoothing_factor * (theta3_target - previous_config[4])
-                theta4 = theta4_target
-            else:
-                theta2 = theta3 = theta4 = 0
-        else:
-            theta2, theta3, theta4 = target_orientation
-        
-        # Apply joint limits
-        theta1 = max(-180, min(180, theta1))
-        theta2 = max(-180, min(180, theta2))
-        theta3 = max(-135, min(135, theta3))
-        theta4 = max(-180, min(180, theta4))
-        
-        return [theta1, l1, l2, theta2, theta3, theta4]
-    
-    def compute_robot_frames(self, theta1, l1, l2, theta2, theta3, theta4):
-        """Calculate positions of all robot joints and links"""
-        th1 = np.deg2rad(theta1)
-        frame_positions = []
-        
-        # World frame origin
-        frame_positions.append(np.array([0, 0, 0]))
-        # Base platform
-        frame_positions.append(np.array([0, 0, 50]))
-        # Top of vertical column
-        frame_positions.append(np.array([0, 0, 800]))
-        # After vertical extension
-        frame_positions.append(np.array([0, 0, 800 + l1]))
-        # After horizontal extension
-        horizontal_pos = np.array([l2 * np.cos(th1), l2 * np.sin(th1), 800 + l1])
-        frame_positions.append(horizontal_pos)
-        # First wrist joint
-        wrist_offset1 = np.array([150 * np.cos(th1), 150 * np.sin(th1), 0])
-        frame_positions.append(horizontal_pos + wrist_offset1)
-        # End effector position
-        end_effector_pos = self.forward_kinematics(theta1, l1, l2, theta2, theta3, theta4)
-        frame_positions.append(end_effector_pos)
-        
-        return np.array(frame_positions)
+        height = 800.0 + l1
+        after_l2 = np.array([-l2 * np.sin(th1), l2 * np.cos(th1), height])
+        wrist_center = np.array(
+            [-(l2 + 150.0) * np.sin(th1), (l2 + 150.0) * np.cos(th1), height]
+        )
+        local_tool_offset = np.array(
+            [-150.0 * np.cos(th2) * np.sin(th3), 150.0 * np.cos(th3), 150.0 * np.sin(th2) * np.sin(th3)]
+        )
+        c1, s1 = np.cos(th1), np.sin(th1)
+        world_tool_offset = np.array(
+            [c1 * local_tool_offset[0] - s1 * local_tool_offset[1],
+             s1 * local_tool_offset[0] + c1 * local_tool_offset[1],
+             local_tool_offset[2]]
+        )
+        end_effector = wrist_center + world_tool_offset
+        return np.array(
+            [[0.0, 0.0, 0.0], [0.0, 0.0, 50.0], [0.0, 0.0, 800.0],
+             [0.0, 0.0, height], after_l2, wrist_center, end_effector]
+        )
     
     def plan_trajectory(self, start_pos, end_pos, motion_time=30.0):
         """Generate trajectory between two points using trapezoidal velocity profile"""
-        acceleration_time = 10.0
-        deceleration_start_time = 20.0
-        time_step = 0.04
-        
-        time_points = np.arange(0, motion_time + time_step, time_step)
-        num_points = len(time_points)
-        
-        positions = np.zeros((3, num_points))
-        orientations = np.zeros((3, num_points))
-        joint_configurations = []
-        velocity_profile = np.zeros(num_points)
-        
-        previous_joints = None
-        total_distance = np.linalg.norm(end_pos - start_pos)
-        area_under_curve = motion_time/2 + deceleration_start_time/2 - acceleration_time/2
-        max_velocity = total_distance / area_under_curve
-        
-        for i, t in enumerate(time_points):
-            if t <= acceleration_time:
-                acceleration = max_velocity / acceleration_time
-                distance_factor = 0.5 * acceleration * t**2 / total_distance
-                current_velocity = acceleration * t
-            elif t <= deceleration_start_time:
-                accel_distance = 0.5 * max_velocity * acceleration_time
-                const_distance = max_velocity * (t - acceleration_time)
-                distance_factor = (accel_distance + const_distance) / total_distance
-                current_velocity = max_velocity
-            else:
-                decel_time = motion_time - deceleration_start_time
-                time_into_decel = t - deceleration_start_time
-                accel_distance = 0.5 * max_velocity * acceleration_time
-                const_distance = max_velocity * (deceleration_start_time - acceleration_time)
-                decel_acceleration = max_velocity / decel_time
-                decel_distance = max_velocity * time_into_decel - 0.5 * decel_acceleration * time_into_decel**2
-                distance_factor = (accel_distance + const_distance + decel_distance) / total_distance
-                current_velocity = max_velocity - decel_acceleration * time_into_decel
-            
-            distance_factor = max(0, min(1, distance_factor))
-            current_velocity = max(0, current_velocity)
-            velocity_profile[i] = current_velocity
-            
-            positions[:, i] = start_pos + distance_factor * (end_pos - start_pos)
-            
-            roll_angle = 10 * np.sin(distance_factor * 2 * np.pi)
-            pitch_angle = 15 * np.cos(distance_factor * np.pi)
-            yaw_angle = distance_factor * 180
-            orientations[:, i] = [roll_angle, pitch_angle, yaw_angle]
-            
-            joint_config = self.inverse_kinematics(positions[:, i], orientations[:, i], previous_joints)
-            joint_configurations.append(joint_config)
-            previous_joints = joint_config
-        
-        return {
-            'time': time_points,
-            'positions': positions,
-            'orientations': orientations,
-            'joint_configs': joint_configurations,
-            'velocities': velocity_profile,
-            'start_pos': start_pos,
-            'end_pos': end_pos
-        }
+        return plan_cartesian_trajectory(
+            start_pos,
+            end_pos,
+            motion_time=motion_time,
+            theta2=0.0,
+            theta3=90.0,
+            theta4_start=0.0,
+            theta4_end=180.0,
+        )
     
     def draw_robot_base(self, ax):
         """Draw the robot base structure"""
@@ -235,24 +125,15 @@ class SCARAGraphGenerator:
     def calculate_workspace(self, resolution=18):
         """Calculate reachable workspace points"""
         print("Calculating robot workspace...")
-        
-        workspace_points = []
-        theta1_values = np.linspace(-180, 180, resolution)
-        l1_values = np.linspace(0, 500, resolution//2)
-        l2_values = np.linspace(0, 500, resolution//2)
-        theta2_values = np.linspace(-90, 90, resolution//3)
-        theta3_values = np.linspace(-90, 90, resolution//3)
-        
-        for theta1 in theta1_values:
-            for l1 in l1_values:
-                for l2 in l2_values:
-                    for theta2 in theta2_values[::2]:
-                        for theta3 in theta3_values[::2]:
-                            end_position = self.forward_kinematics(theta1, l1, l2, theta2, theta3, 0)
-                            workspace_points.append(end_position)
-        
-        self.workspace_data = np.array(workspace_points)
-        print(f"Workspace calculated: {len(workspace_points):,} reachable points")
+        wrist_samples = max(3, resolution // 3)
+        self.workspace_data = sample_workspace(
+            theta1_samples=resolution,
+            l1_samples=max(3, resolution // 2),
+            l2_samples=max(3, resolution // 2),
+            theta2_samples=wrist_samples,
+            theta3_samples=wrist_samples,
+        )
+        print(f"Workspace calculated: {len(self.workspace_data):,} reachable points")
         return self.workspace_data
     
     # GRAPH GENERATION METHODS
@@ -262,11 +143,7 @@ class SCARAGraphGenerator:
         print("Creating kinematics verification plots...")
         
         test_cases = [
-            ([0, 250, 0, 90, 0, 0], [-150, 150, 1050]),
-            ([0, 250, 250, 90, 90, 0], [0, 400, 1200]),
-            ([180, 500, 500, 0, 0, 0], [-800, 0, 1300]),
-            ([180, 500, 500, 90, 90, 180], [-650, 0, 1450]),
-            ([180, 0, 0, 0, 270, 180], [-300, 0, 800])
+            (list(case.joints), list(case.expected_position)) for case in REFERENCE_CASES
         ]
         
         # Individual test case plots
@@ -405,7 +282,9 @@ class SCARAGraphGenerator:
         print("Creating trajectory analysis plots...")
         
         time_data = trajectory_data['time']
-        position_data = trajectory_data['positions']
+        position_data = trajectory_data['commanded_positions']
+        achieved_data = trajectory_data['achieved_positions']
+        position_error = trajectory_data['position_error']
         orientation_data = trajectory_data['orientations']
         velocity_data = trajectory_data['velocities']
         
@@ -421,6 +300,9 @@ class SCARAGraphGenerator:
                     [position_data[1, i], position_data[1, i+1]], 
                     [position_data[2, i], position_data[2, i+1]], 
                     color=trajectory_colors[i], linewidth=3, alpha=0.8)
+
+        ax.plot(achieved_data[0], achieved_data[1], achieved_data[2],
+                color='black', linewidth=2, linestyle='--', label='FK-achieved path')
         
         ax.scatter(position_data[0, 0], position_data[1, 0], position_data[2, 0], 
                   c='green', s=150, marker='o', label='Start', edgecolors='black', linewidth=2)
@@ -435,6 +317,19 @@ class SCARAGraphGenerator:
         
         plt.tight_layout()
         plt.savefig('figure_16_3d_trajectory_path.png', dpi=150, bbox_inches='tight')
+        plt.close()
+
+        # Position consistency - commanded path versus FK-achieved path
+        fig, ax = plt.subplots(figsize=(12, 6))
+        ax.plot(time_data, position_error, color='darkred', linewidth=3)
+        ax.set_xlabel('Time (s)', fontweight='bold')
+        ax.set_ylabel('Position Error (mm)', fontweight='bold')
+        ax.set_title('Commanded vs FK-Achieved Position Error', fontweight='bold')
+        ax.grid(True, alpha=0.3)
+        ax.text(0.02, 0.92, f"Maximum error: {np.max(position_error):.3e} mm",
+                transform=ax.transAxes, bbox=dict(facecolor='white', alpha=0.8))
+        plt.tight_layout()
+        plt.savefig('figure_18_position_error.png', dpi=150, bbox_inches='tight')
         plt.close()
         
         # Figure 17 - Velocity profile
@@ -477,14 +372,14 @@ class SCARAGraphGenerator:
         plt.savefig('figure_22_position_vs_time.png', dpi=150, bbox_inches='tight')
         plt.close()
         
-        # Figure 23 - Orientation vs time
+        # Figure 23 - illustrative wrist posture versus time
         fig, ax = plt.subplots(figsize=(12, 8))
-        ax.plot(time_data, orientation_data[0], 'r-', linewidth=3, label='Roll')
-        ax.plot(time_data, orientation_data[1], 'g-', linewidth=3, label='Pitch')
-        ax.plot(time_data, orientation_data[2], 'b-', linewidth=3, label='Yaw')
+        ax.plot(time_data, orientation_data[0], 'r-', linewidth=3, label='theta2 (fixed)')
+        ax.plot(time_data, orientation_data[1], 'g-', linewidth=3, label='theta3 (fixed)')
+        ax.plot(time_data, orientation_data[2], 'b-', linewidth=3, label='theta4 (illustrative spin)')
         ax.set_xlabel('Time (s)', fontweight='bold')
-        ax.set_ylabel('Orientation (degrees)', fontweight='bold')
-        ax.set_title('End-Effector Orientation\n(6-DOF Motion)', fontweight='bold')
+        ax.set_ylabel('Joint Angle (degrees)', fontweight='bold')
+        ax.set_title('Selected Wrist Posture\n(Not a Full-Pose IK Solution)', fontweight='bold')
         ax.legend()
         ax.grid(True, alpha=0.3)
         
@@ -492,7 +387,7 @@ class SCARAGraphGenerator:
         plt.savefig('figure_23_orientation_vs_time.png', dpi=150, bbox_inches='tight')
         plt.close()
         
-        print(f"  ✓ Saved figures 16-17, 22-23")
+        print(f"  ✓ Saved figures 16-18, 22-23")
 
     def create_joint_analysis_plots(self, trajectory_data):
         """Generate joint analysis plots (Figures 25-26)"""
@@ -884,14 +779,15 @@ class SCARAGraphGenerator:
         print("\n" + "="*60)
         print("ALL GRAPHS GENERATED SUCCESSFULLY!")
         print("="*60)
-        print("Generated files (26 total):")
+        print("Generated files (27 total):")
         print("  Kinematics Verification (6 files):")
         print("    • figure_6_kinematics_test_1.png through figure_6_kinematics_test_5.png")
         print("    • figure_8_kinematics_summary.png")
         print("  Workspace Analysis (4 files):")
         print("    • figure_9_workspace_3d.png through figure_12_workspace_yz.png")
-        print("  Trajectory Analysis (4 files):")
+        print("  Trajectory Analysis (5 files):")
         print("    • figure_16_3d_trajectory_path.png, figure_17_velocity_profile.png")
+        print("    • figure_18_position_error.png")
         print("    • figure_22_position_vs_time.png, figure_23_orientation_vs_time.png")
         print("  Joint Analysis (2 files):")
         print("    • figure_25_rotational_joints.png, figure_26_prismatic_joints.png")
