@@ -7,14 +7,31 @@ lines.
 
 ## Start with the walkthrough
 
-The main presentation is the executed Jupyter Notebook:
+The main presentation is the fully executed Jupyter Notebook:
 
-**[Open the complete SCARA 6-DOF walkthrough](notebooks/scara_6dof_walkthrough.ipynb)**
+### [Open the complete SCARA 6-DOF walkthrough](notebooks/scara_6dof_walkthrough.ipynb)
 
 GitHub displays its saved tables, plots, and analytical animation directly. The
 notebook explains the model from first principles, validates five corrected reference
 configurations, distinguishes commanded from FK-achieved motion, and presents the ROS 2
 and RViz implementation as the visualization layer of the project.
+
+## Notebook preview
+
+### Analytical motion simulation
+
+![Analytical SCARA motion simulation](notebooks/scara_robot_animation.gif)
+
+### Robot model and robotics visualization
+
+| Coordinate-frame model | ROS robot visualization in RViz |
+|---|---|
+| ![SCARA coordinate frames](notebooks/assets/report_coordinate_systems.png) | ![SCARA robot in RViz](notebooks/assets/report_rviz_figure.png) |
+
+The complete notebook contains the mathematical foundation, corrected forward and
+inverse kinematics, five reference-case checks, workspace analysis, commanded-versus-
+achieved trajectory validation, joint motion, velocity and static-load results, the
+analytical animation, and the ROS 2/RViz project presentation.
 
 ## Analytical model
 
