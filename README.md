@@ -1,20 +1,27 @@
 # 6-DOF SCARA Robot Project
 
-An academic robotics project covering the kinematics, workspace, trajectory planning,
-visualization, and simplified static-load analysis of a six-degree-of-freedom SCARA-type
-robot. The proposed application is automated pick-and-place sorting between conveyor
-lines.
+A robotics engineering project covering the kinematics, workspace, differential motion,
+trajectory planning, visualization, and simplified static-load analysis of a
+six-degree-of-freedom SCARA-type robot. The proposed application is vision-guided
+pick-and-place sorting between conveyor lines: an overhead inspection system identifies
+defective products and the robot transfers them to a separate collection line.
+
+The four-revolute/two-prismatic architecture provides a broad cylindrical workspace
+with direct analytical kinematics, making it suitable for repeated sorting, packaging,
+assembly, and material-transfer tasks.
 
 ## Start with the walkthrough
 
-The main presentation is the fully executed Jupyter Notebook:
+The fully executed Jupyter Notebook is the standalone technical documentation for the
+project:
 
 ### [Open the complete SCARA 6-DOF walkthrough](notebooks/scara_6dof_walkthrough.ipynb)
 
 GitHub displays its saved tables, plots, and analytical animation directly. The
-notebook explains the model from first principles, validates five corrected reference
-configurations, distinguishes commanded from FK-achieved motion, and presents the ROS 2
-and RViz implementation as the visualization layer of the project.
+notebook explains the application and model from first principles, validates five
+corrected reference configurations and the analytical Jacobian, distinguishes commanded
+from FK-achieved motion, and presents the ROS 2 and RViz implementation as the
+visualization layer of the project.
 
 ## Notebook preview
 
@@ -28,10 +35,12 @@ and RViz implementation as the visualization layer of the project.
 |---|---|
 | ![SCARA coordinate frames](notebooks/assets/report_coordinate_systems.png) | ![SCARA robot in RViz](notebooks/assets/report_rviz_figure.png) |
 
-The complete notebook contains the mathematical foundation, corrected forward and
-inverse kinematics, five reference-case checks, workspace analysis, commanded-versus-
+The complete notebook contains the application rationale, mathematical foundation,
+corrected forward and inverse kinematics, five reference-case checks, Jacobian
+validation, workspace analysis, trapezoidal trajectory equations, commanded-versus-
 achieved trajectory validation, joint motion, velocity and static-load results, the
-analytical animation, and the ROS 2/RViz project presentation.
+analytical animation, ROS 2/RViz presentation, limitations, future work, and technical
+references.
 
 ## Analytical model
 
@@ -57,19 +66,18 @@ spin. Unreachable positions raise an error instead of being silently clamped.
 .
 |-- scara_model.py                  # Shared analytical equations and trajectory logic
 |-- simulation.py                   # Python/Matplotlib robot animation
-|-- imges.py                        # Original academic graph-generation entry point
+|-- imges.py                        # Original graph-generation entry point
 |-- notebooks/
 |   |-- scara_6dof_walkthrough.ipynb
 |   |-- scara_robot_animation.gif
-|   `-- assets/                    # Selected report diagrams and RViz capture
+|   `-- assets/                     # Project design diagrams and RViz capture
 |-- scripts/
 |   `-- execute_notebook.py         # No-Jupyter fallback executor
 |-- tests/
 |   `-- test_scara_model.py
 |-- final_ws/                       # Original ROS 2/Xacro project workspace
 `-- docs/
-    |-- SCARA-6DOF-Final-Report.pdf
-    `-- nstructions_for_that_code.pdf
+    `-- nstructions_for_that_code.pdf  # Original installation and operating notes
 ```
 
 ## Requirements
@@ -122,7 +130,7 @@ python scripts/execute_notebook.py notebooks/scara_6dof_walkthrough.ipynb
 
 ## Run the Python demonstrations
 
-Generate the academic analysis plots in the current directory:
+Generate the original analysis plots in the current directory:
 
 ```bash
 python imges.py
@@ -212,8 +220,10 @@ machine, so the restored launch files were validated statically but were not rer
 
 ## Documentation
 
-- [Final academic report](docs/SCARA-6DOF-Final-Report.pdf)
-- [Original installation and operating notes](docs/nstructions_for_that_code.pdf)
+The executed [project walkthrough](notebooks/scara_6dof_walkthrough.ipynb) consolidates
+the relevant theory, equations, implementation, validation, figures, motion results,
+limitations, and references. Separate setup information remains available in the
+[original installation and operating notes](docs/nstructions_for_that_code.pdf).
 
 ## Intentional limitations
 
